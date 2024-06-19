@@ -22,8 +22,8 @@ const upload = multer({
     storage: multer.diskStorage({
         //저장할 위치
         destination(req,file,callback){
-            const arrows = ['notice', 'note'];
-            if(arrows.includes(req.params.route)){
+            const allowed = ['notice', 'note', 'protection'];
+            if(allowed.includes(req.params.route)){
                 const dir = `public/img/uploads/${req.params.route}`;
                 ! fs.existsSync(dir) && fs.mkdirSync(dir);
                 callback(null,dir);
@@ -33,7 +33,6 @@ const upload = multer({
         },
         //파일 명명 규칙
         filename(req, file, callback){
-            console.log("file",file)
             file.originalname = Buffer.from(file.originalname, 'latin1').toString('utf8')
             const ext = path.extname(file.originalname);
             callback(null, path.basename(file.originalname,ext) + randomUUID() + ext);
@@ -43,7 +42,7 @@ const upload = multer({
     limits : {
         files:10, fileSize: limit
     }
-}).single('img')
+}).array('img')
 
 app.listen(port, ()=>{
     console.log("포토 서버 개시 완료")
@@ -53,22 +52,25 @@ app.post('/img/:route', (req,res) =>{
     upload(req, res, function (err) {
         if (err) {
             console.log(`사진 업로드 중 에러 : ${err}`);
-            res.status(500).send(`사진을 불러올 수 없습니다.`);
+            res.status(500).send(`사진을 불러올 수 없습니다. 관리자에게 문의하세요.`);
             return;
         }
 
-        try {
-            console.log("저장할 위치",req.params.route);
-            console.log('전달받은 파일', req.file);
-            console.log('저장된 파일의 이름', req.file.filename);
-
-            // 파일이 저장된 경로를 클라이언트에게 반환해준다.
-            const IMG_URL = `http://localhost:${port}/${req.params.route}/${req.file.filename}`;
-            console.log(IMG_URL);
-            res.json({ url: IMG_URL });
-        }catch (err){
-            console.log("Error!")
+        if(req.files === undefined || req.files.length <= 0){
+            res.status(404).send(`이미지 파일이 입력되지 않았습니다. 관리자에게 문의하세요.`);
+            return;
         }
-    })
 
+        console.log("저장할 위치",req.params.route);
+        console.log('전달받은 파일', req.files);
+
+        // 파일이 저장된 경로를 클라이언트에게 반환해준다.
+        let totalUrls = [];
+        req.files.map((file,idx)=>{
+            const IMG_URL = `http://localhost:${port}/${req.params.route}/${file.filename}`;
+            console.log(IMG_URL);
+            totalUrls.push(IMG_URL);
+        })
+        res.json({ urls: totalUrls.toString() });
+    })
 })

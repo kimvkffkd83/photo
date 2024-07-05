@@ -22,7 +22,7 @@ const upload = multer({
     storage: multer.diskStorage({
         //저장할 위치
         destination(req,file,callback){
-            const allowed = ['notice', 'note', 'protection'];
+            const allowed = ['notice', 'protection','adopt', 'missing'];
             if(allowed.includes(req.params.route)){
                 const dir = `public/img/uploads/${req.params.route}`;
                 ! fs.existsSync(dir) && fs.mkdirSync(dir);
